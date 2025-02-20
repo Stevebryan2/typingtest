@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        
+        #test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #sample-text {
+            font-size: 18px;
+            line-height: 1.8;
+            margin: 20px 0;
+            color: #666;
+            text-align: left;
+            white-space: pre-wrap;
+        }
+
+        .word {
+            display: inline-block;
+            margin: 0 4px;
+        }
+
+        .word.correct {
+            color: #4CAF50;
+        }
+
+        .word.incorrect {
+            color: #f44336;
+            text-decoration: underline wavy #f44336;
+        }
+
+        .word.current {
+            background-color: #e3f2fd;
+        }
+
+        #input-area {
+            width: 100%;
+            height: 80px;
+            margin: 20px 0;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            resize: none;
+        }
+
+        #input-area:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        #timer {
+            font-size: 24px;
+            color: #333;
+            margin: 20px 0;
+        }
+
+        #result {
+            font-size: 20px;
+            color: #2c3e50;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        #start-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #start-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #stats {
+            margin-top: 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="test-container">
+        <h1>Tes Kecepatan Mengetik</h1>
+        <p>Uji kecepatan mengetik Anda! Anda hanya mendapat satu kesempatan.</p>
+        
+        <div id="timer">Waktu: 60 detik</div>
+        <div id="stats">Kata yang benar: <span id="correct-words">0</span> | Kata yang salah: <span id="incorrect-words">0</span></div>
+        
+        <div id="sample-text"></div>
+        
+        <textarea id="input-area" placeholder="Klik 'Mulai Tes' dan mulai mengetik..." disabled></textarea>
+        
+        <button id="start-btn">Mulai Tes</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const words = [
+            "yang", "dengan", "untuk", "dari", "dalam", "akan", "pada", "bisa", "juga", "saya", "saat",
+            "oleh", "setelah", "tentang", "seperti", "ketika", "bagi", "sampai", "kepada", "sebagai",
+            "karena", "sudah", "serta", "apabila", "melalui", "lain", "sekarang", "dimana", "sambil",
+            "yakni", "menurut", "hampir", "dimulai", "mulai", "selama", "sebelum", "bahwa", "namun",
+            "sangat", "meski", "tetap", "sebuah", "terhadap", "sampai", "membuat", "memiliki", "memberikan",
+            "berbagai", "tersebut", "terus", "hingga", "tentang", "bagian", "mendapat", "memilih",
+            "jakarta", "indonesia", "development", "masyarakat", "teknologi", "pemerintah", "kegiatan",
+            "pelayanan", "pendidikan", "kepentingan", "permintaan", "pengembangan", "perusahaan",
+            "informasi", "indonesia", "melakukan", "diperlukan", "sebagian", "beberapa", "diberikan",
+            "mendapatkan", "dikembangkan", "kesempatan", "kemampuan", "digunakan", "berdasarkan",
+            "lingkungan", "kebutuhan", "pengelolaan", "pembangunan", "pendapatan", "komunikasi",
+            "menjadi", "terdapat", "nasional", "program", "republik", "ekonomi", "produksi", "internal",
+            "kembali", "sumber", "utama", "sekitar", "tujuan", "metode", "proses", "masalah", "tingkat",
+            "sistem", "bentuk", "hasil", "kerja", "nilai", "bangsa", "dunia", "perlu", "sama", "antara"
+        ];
+
+        function generateRandomText(wordCount) {
+            const shuffled = [...words].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, wordCount).join(' ');
+        }
+
+        const sampleTextContainer = document.getElementById('sample-text');
+        const inputArea = document.getElementById('input-area');
+        const startBtn = document.getElementById('start-btn');
+        const timerDisplay = document.getElementById('timer');
+        const resultDisplay = document.getElementById('result');
+        const correctWordsDisplay = document.getElementById('correct-words');
+        const incorrectWordsDisplay = document.getElementById('incorrect-words');
+
+        let timeLeft = 60;
+        let timer;
+        let testStarted = false;
+        let testCompleted = localStorage.getItem('typingTestCompleted') === 'true';
+        let currentWordIndex = 0;
+        let correctWords = 0;
+        let incorrectWords = 0;
+
+        // Generate 250 random words
+        const sampleText = generateRandomText(250);
+        const sampleWords = sampleText.split(' ');
+
+        // Create word spans
+        sampleWords.forEach((word, index) => {
+            const span = document.createElement('span');
+            span.textContent = word + ' ';
+            span.className = 'word';
+            span.id = `word-${index}`;
+            sampleTextContainer.appendChild(span);
+        });
+
+        if (testCompleted) {
+            startBtn.disabled = true;
+            startBtn.textContent = 'Tes Sudah Selesai';
+            inputArea.placeholder = 'Anda sudah mengambil tes ini.';
+        }
+
+        // Disable copy-paste
+        inputArea.addEventListener('copy', e => e.preventDefault());
+        inputArea.addEventListener('paste', e => e.preventDefault());
+        inputArea.addEventListener('cut', e => e.preventDefault());
+
+        // Disable right-click
+        inputArea.addEventListener('contextmenu', e => e.preventDefault());
+
+        startBtn.addEventListener('click', startTest);
+
+        function startTest() {
+            if (testCompleted) return;
+            
+            testStarted = true;
+            inputArea.disabled = false;
+            inputArea.value = '';
+            inputArea.focus();
+            startBtn.disabled = true;
+            
+            document.getElementById(`word-0`).classList.add('current');
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `Waktu: ${timeLeft} detik`;
+                
+                if (timeLeft <= 0) {
+                    endTest();
+                }
+            }, 1000);
+        }
+
+        inputArea.addEventListener('input', (e) => {
+            if (!testStarted || timeLeft <= 0) return;
+
+            const typedText = e.target.value;
+            const currentWord = sampleWords[currentWordIndex];
+            
+            if (typedText.endsWith(' ')) {
+                // Word completed
+                const typedWord = typedText.trim();
+                const wordSpan = document.getElementById(`word-${currentWordIndex}`);
+                
+                if (typedWord === currentWord) {
+                    wordSpan.classList.add('correct');
+                    correctWords++;
+                } else {
+                    wordSpan.classList.add('incorrect');
+                    incorrectWords++;
+                }
+                
+                wordSpan.classList.remove('current');
+                currentWordIndex++;
+                
+                if (currentWordIndex < sampleWords.length) {
+                    document.getElementById(`word-${currentWordIndex}`).classList.add('current');
+                }
+                
+                e.target.value = '';
+                
+                // Update stats
+                correctWordsDisplay.textContent = correctWords;
+                incorrectWordsDisplay.textContent = incorrectWords;
+            }
+        });
+
+        function endTest() {
+            clearInterval(timer);
+            inputArea.disabled = true;
+            testCompleted = true;
+            localStorage.setItem('typingTestCompleted', 'true');
+            
+            const totalAttempted = correctWords + incorrectWords;
+            const accuracy = Math.round((correctWords / totalAttempted) * 100) || 0;
+            const wpm = Math.round(correctWords);
+            
+            resultDisplay.style.display = 'block';
+            resultDisplay.innerHTML = `
+                <h2>Hasil:</h2>
+                <p>Kata Per Menit (KPM): ${wpm}</p>
+                <p>Akurasi: ${accuracy}%</p>
+                <p>Kata yang benar: ${correctWords}</p>
+                <p>Kata yang salah: ${incorrectWords}</p>
+                <p>Total kata yang dicoba: ${totalAttempted}</p>
+            `;
+        }
+    </script>
+</body>
+</html>
